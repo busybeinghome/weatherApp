@@ -3,7 +3,9 @@ import urllib.request
 
 import wikipedia
 from django.shortcuts import render
-
+import requests
+from bs4 import BeautifulSoup
+from googletrans import Translator
 
 def index(request):
     if request.method == 'POST':
@@ -43,24 +45,92 @@ def about(request):
     return render(request, 'main/about.html')
     # return HttpResponse("<h4> Страница про нас </h4>")
 
+#
+# def wiki(request):
+#     wikipedia.set_lang('en')
+#     file_path = 'cityname'
+#
+#     # Открытие файла в режиме чтения ('r')
+#     with open(file_path, 'r') as file:
+#         cin = file.read()
+#     cin +=" is city"
+#     page = wikipedia.page(cin)
+#
+#     # Extract necessary data
+#     title = page.title
+#     summary = page.summary
+#     images = page.images[0]
+#     citydata = {
+#         "title": str(title),  # Добавил
+#         "summary": str(summary),
+#         "images": images,
+#     }
+#     return render(request, 'main/wiki.html',citydata)
+
+
 
 def wiki(request):
+    # Задание языка Википедии на английский
     wikipedia.set_lang('en')
     file_path = 'cityname'
 
     # Открытие файла в режиме чтения ('r')
     with open(file_path, 'r') as file:
-        cin = file.read()
-    cin +=" name city"
-    page = wikipedia.page(cin)
+        cin = file.read().strip()
+    nm="head"
+    translator = Translator()
+    result = translator.translate(cin, src='en', dest='ru')
 
-    # Extract necessary data
-    title = page.title
-    summary = page.summary
-    images = page.images[0]
+
+
+    url = f"https://ru.wikipedia.org/wiki/{result.text}"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Извлечение названия статьи
+    name_element = soup.find('h1', {'id': 'firstHeading'})
+    name = name_element.get_text() if name_element else "Название не найдено"
+
+    # Извлечение первого абзаца статьи
+    content_element = soup.find('div', {'id': 'bodyContent'})
+    first_paragraph = content_element.find('p').get_text() if content_element and content_element.find('p') else "Первый абзац не найден"
+
+    # Извлечение первой картинки
+    image_url = "Изображение не найдено"
+    if content_element:
+        first_image_element = content_element.find('img')
+        if first_image_element:
+            image_url = f"https:{first_image_element['src']}"
+
+    # Извлечение информации с использованием data-wikidata-property-id
+    population_span = soup.find('span', {'data-wikidata-property-id': 'P1082'})
+    population = population_span.get_text() if population_span else "Информация о населении не найдена"
+
+    time_span = soup.find('span', {'data-wikidata-property-id': 'P421'})
+    time = time_span.get_text() if time_span else "Информация о времени не найдена"
+
+    year_span = soup.find('span', {'data-wikidata-property-id': 'P571'})
+    year = year_span.get_text() if year_span else "Информация о годе основания не найдена"
+
+    square_span = soup.find('span', {'data-wikidata-property-id': 'P2046'})
+    square = square_span.get_text() if square_span else "Информация о площади не найдена"
+
+    # Печать результатов
+    print(f"Название: {name}")
+    print(f"Первый абзац: {first_paragraph}")
+    print(f"Первая картинка: {image_url}")
+    print(f"Население: {population}")
+    print(f"Часовой пояс: {time}")
+    print(f"Год основания: {year}")
+    print(f"Площадь: {square}")
     citydata = {
-        "title": str(title),  # Добавил
-        "summary": str(summary),
-        "images": images,
+        "title": str(name),  # Добавил
+        "summary": str(first_paragraph),
+        "images": image_url,
+        "population": str(population),
+        "year": str(year),
+        "time": str(time),
+        "square": str(square),
     }
-    return render(request, 'main/wiki.html',citydata)
+    return render(request, 'main/wiki.html', citydata)
+
