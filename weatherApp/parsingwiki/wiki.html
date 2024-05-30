@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{title}</title>
+</head>
+<body>
+    <h1>{title}</h1>
+    <p>{summary}</p>
+    <h2>Images</h2>
+    <div>
+        {"".join([f'<img src="{img}" alt="{title}">' for img in images])}
+    </div>
+</body>
+</html>
+"""
